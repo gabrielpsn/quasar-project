@@ -60,8 +60,8 @@
         <q-list padding>
           <q-item class="q-pa-md q-mb-sm">
             <q-item-section>
-              <div class="text-h6">{{ user?.name || 'User' }}</div>
-              <div class="text-caption text-grey-8">{{ user?.email || 'user@example.com' }}</div>
+              <div class="text-h6">{{ user?.nome || 'Usuário' }}</div>
+              <div class="text-caption text-grey-8">{{ user?.email || 'Modo local offline' }}</div>
             </q-item-section>
           </q-item>
 
@@ -92,6 +92,25 @@
     </q-drawer>
 
     <q-page-container>
+      <q-banner
+        v-if="storage.needsPermission"
+        dense
+        class="bg-orange-1 text-orange-10 q-ma-sm rounded-borders"
+        inline-actions
+      >
+        <q-icon name="warning" class="q-mr-xs" />
+        Sem acesso à pasta de dados. Reconecte para ler e gravar seus arquivos .txt.
+        <template v-slot:action>
+          <q-btn
+            flat
+            dense
+            color="orange"
+            label="Reconectar"
+            @click="reconnect"
+          />
+        </template>
+      </q-banner>
+
       <router-view v-slot="{ Component }">
         <transition
           enter-active-class="animated fadeIn"
@@ -110,33 +129,31 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
+import { useStorageStore } from 'src/stores/storage';
 
 const $q = useQuasar();
 const router = useRouter();
 const authStore = useAuthStore();
+const storage = useStorageStore();
 const leftDrawerOpen = ref(false);
 
 // Navigation links
 const navLinks = [
   { title: 'Dashboard', icon: 'dashboard', to: '/' },
-  { title: 'Transactions', icon: 'payments', to: '/transactions' },
-  { title: 'Categories', icon: 'category', to: '/categories' },
-  { title: 'Goals', icon: 'flag', to: '/goals' },
-  { title: 'Reports', icon: 'assessment', to: '/reports' },
-  { title: 'Budgets', icon: 'account_balance_wallet', to: '/budgets' },
+  { title: 'Fluxo de Caixa', icon: 'calendar_month', to: '/fluxo-caixa' },
+  { title: 'Transações', icon: 'payments', to: '/transactions' },
+  { title: 'Cartões', icon: 'credit_card', to: '/cartoes' },
+  { title: 'Dívidas', icon: 'handshake', to: '/dividas' },
+  { title: 'Investimentos', icon: 'pie_chart', to: '/investimentos' },
+  { title: 'Patrimônio', icon: 'account_balance', to: '/patrimonio' },
+  { title: 'Categorias', icon: 'category', to: '/categories' },
+  { title: 'Metas', icon: 'flag', to: '/goals' },
+  { title: 'Configurações', icon: 'settings', to: '/settings' },
 ];
 
 // User data
 const user = computed(() => authStore.user);
-const userInitials = computed(() => {
-  if (!authStore.user?.name) return 'U';
-  return authStore.user.name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-    .substring(0, 2);
-});
+const userInitials = computed(() => authStore.initials);
 
 // Toggle left drawer
 function toggleLeftDrawer() {
@@ -145,32 +162,33 @@ function toggleLeftDrawer() {
 
 // Handle logout
 async function onLogout() {
+  authStore.logout();
+  $q.notify({
+    color: 'positive',
+    message: 'Sessão bloqueada.',
+    icon: 'lock',
+  });
+  router.push('/login');
+}
+
+async function reconnect() {
   try {
-    await authStore.logout();
+    const ok = await storage.requestPermission();
     $q.notify({
-      color: 'positive',
-      message: 'You have been logged out successfully',
-      icon: 'check_circle',
+      color: ok ? 'positive' : 'warning',
+      icon: ok ? 'check_circle' : 'warning',
+      message: ok ? 'Acesso aos dados restaurado.' : 'Permissão não concedida.',
     });
-    router.push('/login');
   } catch (error) {
-    console.error('Logout error:', error);
-    $q.notify({
-      color: 'negative',
-      message: 'Failed to logout. Please try again.',
-      icon: 'error',
-    });
+    $q.notify({ color: 'negative', icon: 'error', message: error.message });
   }
 }
 
-// Fetch user data on component mount
+// Carrega o perfil local e reage a recarregamentos de dados (import/reset).
 onMounted(async () => {
-  if (authStore.isAuthenticated && !authStore.user) {
-    try {
-      await authStore.fetchUser();
-    } catch (error) {
-      console.error('Failed to fetch user data:', error);
-    }
-  }
+  await authStore.init();
+  window.addEventListener('storage:reloaded', () => {
+    authStore.init();
+  });
 });
 </script>

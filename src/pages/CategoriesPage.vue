@@ -1,16 +1,16 @@
 <template>
   <q-page class="q-pa-md">
     <div class="row items-center justify-between q-mb-md">
-      <div class="text-h5">Categories</div>
+      <div class="text-h5">Categorias</div>
       <q-btn
         color="primary"
         icon="add"
-        label="Add Category"
+        label="Nova categoria"
         @click="showCategoryForm()"
       />
     </div>
 
-    <!-- Categories Grid -->
+    <!-- Categorias -->
     <div v-if="loading" class="row q-col-gutter-md">
       <div v-for="i in 6" :key="i" class="col-12 col-sm-6 col-md-4">
         <q-card>
@@ -32,56 +32,42 @@
     </div>
 
     <div v-else class="row q-col-gutter-md">
-      <div 
-        v-for="category in categories" 
-        :key="category.id" 
+      <div
+        v-for="category in categories"
+        :key="category.id"
         class="col-12 col-sm-6 col-md-4"
       >
         <q-card>
           <q-item>
             <q-item-section avatar>
               <q-avatar
-                :color="category.color || 'primary'"
+                :color="category.cor || 'primary'"
                 text-color="white"
-                :icon="category.icon || 'category'"
+                :icon="category.icone || 'category'"
               />
             </q-item-section>
             <q-item-section>
               <q-item-label class="text-weight-medium">
-                {{ category.name }}
+                {{ category.nome }}
               </q-item-label>
               <q-item-label caption>
-                {{ category.type === 'income' ? 'Income' : 'Expense' }}
+                {{ category.tipo === 'entrada' ? 'Entrada' : 'Saída' }}
               </q-item-label>
             </q-item-section>
             <q-item-section side>
-              <q-btn
-                flat
-                round
-                dense
-                icon="more_vert"
-              >
+              <q-btn flat round dense icon="more_vert">
                 <q-menu auto-close>
                   <q-list style="min-width: 150px">
                     <q-item clickable @click="showCategoryForm(category)">
-                      <q-item-section>Edit</q-item-section>
+                      <q-item-section>Editar</q-item-section>
                       <q-item-section avatar>
                         <q-icon name="edit" />
                       </q-item-section>
                     </q-item>
-                    <q-item 
-                      clickable 
-                      @click="confirmDeleteCategory(category)"
-                      :disable="category.is_default"
-                    >
-                      <q-item-section :class="{ 'text-grey': category.is_default }">
-                        Delete
-                      </q-item-section>
+                    <q-item clickable @click="confirmDeleteCategory(category)">
+                      <q-item-section class="text-negative">Excluir</q-item-section>
                       <q-item-section avatar>
-                        <q-icon 
-                          name="delete" 
-                          :class="{ 'text-grey': category.is_default }"
-                        />
+                        <q-icon name="delete" color="negative" />
                       </q-item-section>
                     </q-item>
                   </q-list>
@@ -89,58 +75,48 @@
               </q-btn>
             </q-item-section>
           </q-item>
-          
-          <q-separator v-if="category.description" />
-          
-          <q-card-section v-if="category.description" class="q-pt-none">
+
+          <q-separator v-if="category.descricao" />
+
+          <q-card-section v-if="category.descricao" class="q-pt-none">
             <div class="text-caption text-grey-8">
-              {{ category.description }}
+              {{ category.descricao }}
             </div>
           </q-card-section>
-          
+
           <q-card-actions align="right">
-            <q-badge 
-              :color="category.type === 'income' ? 'positive' : 'negative'"
-              :label="category.type === 'income' ? 'Income' : 'Expense'"
+            <q-badge
+              :color="category.tipo === 'entrada' ? 'positive' : 'negative'"
+              :label="category.tipo === 'entrada' ? 'Entrada' : 'Saída'"
               class="q-mr-sm"
             />
             <q-space />
-            <q-badge 
-              v-if="category.is_default"
+            <q-badge
+              v-if="category.padrao"
               color="blue"
-              label="Default"
+              label="Padrão"
               class="q-mr-sm"
-            />
-            <q-badge 
-              v-if="category.transactions_count"
-              color="grey-6"
-              :label="`${category.transactions_count} transactions`"
             />
           </q-card-actions>
         </q-card>
       </div>
-      
+
       <div v-if="!loading && categories.length === 0" class="col-12 text-center">
         <q-icon name="category" size="4rem" color="grey-4" class="q-mb-sm" />
-        <div class="text-h6 text-grey-7">No categories found</div>
+        <div class="text-h6 text-grey-7">Nenhuma categoria encontrada</div>
         <div class="text-subtitle2 text-grey-6 q-mb-md">
-          Start by creating your first category
+          Comece criando sua primeira categoria
         </div>
-        <q-btn
-          color="primary"
-          label="Add Category"
-          icon="add"
-          @click="showCategoryForm()"
-        />
+        <q-btn color="primary" label="Nova categoria" icon="add" @click="showCategoryForm()" />
       </div>
     </div>
 
-    <!-- Category Form Dialog -->
+    <!-- Formulário -->
     <q-dialog v-model="showForm" persistent>
-      <q-card style="min-width: 400px">
+      <q-card style="min-width: 400px" class="rounded-borders">
         <q-form @submit="saveCategory">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">{{ form.id ? 'Edit' : 'Add' }} Category</div>
+            <div class="text-h6">{{ form.id ? 'Editar' : 'Nova' }} categoria</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
@@ -148,44 +124,43 @@
           <q-card-section class="q-pt-none">
             <div class="q-gutter-y-md">
               <q-radio
-                v-model="form.type"
-                val="income"
-                label="Income"
-                color="positive"
+                v-model="form.tipo"
+                val="saida"
+                label="Saída"
+                color="negative"
                 class="q-mr-md"
               />
               <q-radio
-                v-model="form.type"
-                val="expense"
-                label="Expense"
-                color="negative"
+                v-model="form.tipo"
+                val="entrada"
+                label="Entrada"
+                color="positive"
               />
 
               <q-input
-                v-model="form.name"
-                label="Name"
+                v-model="form.nome"
+                label="Nome"
                 outlined
                 dense
-                :rules="[val => !!val || 'Name is required']"
+                :rules="[val => !!val || 'O nome é obrigatório']"
               />
-
 
               <div class="row q-col-gutter-sm">
                 <div class="col-6">
                   <q-select
-                    v-model="form.icon"
+                    v-model="form.icone"
                     :options="iconOptions"
-                    label="Icon"
+                    label="Ícone"
                     outlined
                     dense
                     emit-value
                     map-options
-                    :rules="[val => !!val || 'Icon is required']"
+                    :rules="[val => !!val || 'O ícone é obrigatório']"
                   >
                     <template v-slot:selected>
                       <div class="row items-center">
-                        <q-icon :name="form.icon || 'category'" class="q-mr-sm" />
-                        {{ form.icon || 'Select an icon' }}
+                        <q-icon :name="form.icone || 'category'" class="q-mr-sm" />
+                        {{ form.icone || 'Selecione um ícone' }}
                       </div>
                     </template>
                     <template v-slot:option="{ itemProps, opt, selected }">
@@ -205,23 +180,23 @@
                 </div>
                 <div class="col-6">
                   <q-select
-                    v-model="form.color"
+                    v-model="form.cor"
                     :options="colorOptions"
-                    label="Color"
+                    label="Cor"
                     outlined
                     dense
                     emit-value
                     map-options
-                    :rules="[val => !!val || 'Color is required']"
+                    :rules="[val => !!val || 'A cor é obrigatória']"
                   >
                     <template v-slot:selected>
                       <div class="row items-center">
-                        <q-icon 
-                          name="palette" 
-                          :color="form.color || 'grey-6'" 
-                          class="q-mr-sm" 
+                        <q-icon
+                          name="palette"
+                          :color="form.cor || 'grey-6'"
+                          class="q-mr-sm"
                         />
-                        {{ form.color ? form.color.replace('-', ' ') : 'Select a color' }}
+                        {{ form.cor ? form.cor.replace('-', ' ') : 'Selecione uma cor' }}
                       </div>
                     </template>
                     <template v-slot:option="{ itemProps, opt, selected }">
@@ -242,8 +217,8 @@
               </div>
 
               <q-input
-                v-model="form.description"
-                label="Description (Optional)"
+                v-model="form.descricao"
+                label="Descrição (opcional)"
                 type="textarea"
                 outlined
                 dense
@@ -253,10 +228,10 @@
           </q-card-section>
 
           <q-card-actions align="right">
-            <q-btn flat label="Cancel" color="primary" v-close-popup />
+            <q-btn flat label="Cancelar" color="primary" v-close-popup />
             <q-btn
               type="submit"
-              :label="form.id ? 'Update' : 'Create'"
+              :label="form.id ? 'Salvar' : 'Criar'"
               color="primary"
               :loading="saving"
             />
@@ -268,192 +243,164 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useQuasar } from 'quasar';
-import { useCategoryStore } from 'src/stores/categories';
+import { ref, onMounted } from 'vue'
+import { useQuasar } from 'quasar'
+import { useCategoryStore } from 'src/stores/categories'
 
-const $q = useQuasar();
-const categoryStore = useCategoryStore();
+const $q = useQuasar()
+const categoryStore = useCategoryStore()
 
-// State
-const loading = ref(false);
-const saving = ref(false);
-const showForm = ref(false);
-const categories = ref([]);
+const loading = ref(false)
+const saving = ref(false)
+const showForm = ref(false)
+const categories = ref([])
 
-// Form
 const form = ref({
   id: null,
-  name: '',
-  type: 'expense',
-  icon: 'category',
-  color: 'primary',
-  description: '',
-  is_default: false
-});
+  nome: '',
+  tipo: 'saida',
+  icone: 'category',
+  cor: 'primary',
+  descricao: '',
+  padrao: false,
+})
 
 const iconOptions = [
-  { label: 'Category', value: 'category' },
-  { label: 'Shopping', value: 'shopping_cart' },
-  { label: 'Food', value: 'restaurant' },
-  { label: 'Transport', value: 'directions_car' },
-  { label: 'Home', value: 'home' },
-  { label: 'Bill', value: 'receipt' },
-  { label: 'Entertainment', value: 'movie' },
-  { label: 'Health', value: 'favorite' },
-  { label: 'Education', value: 'school' },
-  { label: 'Gift', value: 'card_giftcard' },
-  { label: 'Salary', value: 'account_balance' },
-  { label: 'Investment', value: 'trending_up' },
-  { label: 'Other', value: 'more_horiz' }
-];
+  { label: 'Categoria', value: 'category' },
+  { label: 'Compras', value: 'shopping_cart' },
+  { label: 'Alimentação', value: 'restaurant' },
+  { label: 'Transporte', value: 'directions_car' },
+  { label: 'Casa', value: 'home' },
+  { label: 'Conta', value: 'receipt' },
+  { label: 'Lazer', value: 'movie' },
+  { label: 'Saúde', value: 'favorite' },
+  { label: 'Educação', value: 'school' },
+  { label: 'Presente', value: 'card_giftcard' },
+  { label: 'Salário', value: 'account_balance' },
+  { label: 'Investimento', value: 'trending_up' },
+  { label: 'Outro', value: 'more_horiz' },
+]
 
 const colorOptions = [
-  { label: 'Red', value: 'red' },
-  { label: 'Pink', value: 'pink' },
-  { label: 'Purple', value: 'purple' },
-  { label: 'Deep Purple', value: 'deep-purple' },
-  { label: 'Indigo', value: 'indigo' },
-  { label: 'Blue', value: 'blue' },
-  { label: 'Light Blue', value: 'light-blue' },
-  { label: 'Cyan', value: 'cyan' },
-  { label: 'Teal', value: 'teal' },
-  { label: 'Green', value: 'green' },
-  { label: 'Light Green', value: 'light-green' },
-  { label: 'Lime', value: 'lime' },
-  { label: 'Yellow', value: 'yellow' },
-  { label: 'Amber', value: 'amber' },
-  { label: 'Orange', value: 'orange' },
-  { label: 'Deep Orange', value: 'deep-orange' },
-  { label: 'Brown', value: 'brown' },
-  { label: 'Grey', value: 'grey' },
-  { label: 'Blue Grey', value: 'blue-grey' }
-];
+  { label: 'Vermelho', value: 'red' },
+  { label: 'Rosa', value: 'pink' },
+  { label: 'Roxo', value: 'purple' },
+  { label: 'Roxo escuro', value: 'deep-purple' },
+  { label: 'Índigo', value: 'indigo' },
+  { label: 'Azul', value: 'blue' },
+  { label: 'Azul claro', value: 'light-blue' },
+  { label: 'Ciano', value: 'cyan' },
+  { label: 'Verde-azulado', value: 'teal' },
+  { label: 'Verde', value: 'green' },
+  { label: 'Verde claro', value: 'light-green' },
+  { label: 'Lima', value: 'lime' },
+  { label: 'Amarelo', value: 'yellow' },
+  { label: 'Âmbar', value: 'amber' },
+  { label: 'Laranja', value: 'orange' },
+  { label: 'Laranja escuro', value: 'deep-orange' },
+  { label: 'Marrom', value: 'brown' },
+  { label: 'Cinza', value: 'grey' },
+  { label: 'Cinza azulado', value: 'blue-grey' },
+]
 
-// Methods
-const resetForm = () => {
+function resetForm() {
   form.value = {
     id: null,
-    name: '',
-    type: 'expense',
-    icon: 'category',
-    color: 'primary',
-    description: '',
-    is_default: false
-  };
-};
+    nome: '',
+    tipo: 'saida',
+    icone: 'category',
+    cor: 'primary',
+    descricao: '',
+    padrao: false,
+  }
+}
 
-const showCategoryForm = (category = null) => {
+function showCategoryForm(category = null) {
   if (category) {
-    // Edit mode
-    form.value = { ...category };
+    form.value = { ...category }
   } else {
-    // Add mode
-    resetForm();
+    resetForm()
   }
-  showForm.value = true;
-};
+  showForm.value = true
+}
 
-const saveCategory = async () => {
-  saving.value = true;
+async function saveCategory() {
+  saving.value = true
   try {
-    const categoryData = { ...form.value };
-    
-    if (categoryData.id) {
-      // Update existing category
-      await categoryStore.updateCategory(categoryData);
-      $q.notify({
-        color: 'positive',
-        message: 'Category updated successfully',
-        icon: 'check_circle'
-      });
-    } else {
-      // Create new category
-      await categoryStore.createCategory(categoryData);
-      $q.notify({
-        color: 'positive',
-        message: 'Category created successfully',
-        icon: 'check_circle'
-      });
+    const payload = {
+      id: form.value.id,
+      nome: form.value.nome,
+      tipo: form.value.tipo,
+      icone: form.value.icone,
+      cor: form.value.cor,
+      descricao: form.value.descricao,
+      padrao: form.value.padrao,
     }
-    
-    showForm.value = false;
-    await loadCategories();
-    resetForm();
-  } catch (error) {
-    console.error('Error saving category:', error);
-    $q.notify({
-      color: 'negative',
-      message: error.message || 'Failed to save category',
-      icon: 'error'
-    });
-  } finally {
-    saving.value = false;
-  }
-};
 
-const confirmDeleteCategory = (category) => {
-  if (category.is_default) {
+    if (payload.id) {
+      await categoryStore.updateCategory(payload)
+      $q.notify({ color: 'positive', message: 'Categoria atualizada.', icon: 'check_circle' })
+    } else {
+      await categoryStore.createCategory(payload)
+      $q.notify({ color: 'positive', message: 'Categoria criada.', icon: 'check_circle' })
+    }
+
+    showForm.value = false
+    await loadCategories()
+    resetForm()
+  } catch (error) {
     $q.notify({
       color: 'negative',
-      message: 'Default categories cannot be deleted',
-      icon: 'warning'
-    });
-    return;
+      message: error.message || 'Não foi possível salvar a categoria',
+      icon: 'error',
+    })
+  } finally {
+    saving.value = false
   }
-  
+}
+
+function confirmDeleteCategory(category) {
   $q.dialog({
-    title: 'Confirm Delete',
-    message: `Are you sure you want to delete "${category.name}"?`,
+    title: 'Confirmar exclusão',
+    message: `Tem certeza que deseja excluir "${category.nome}"?`,
     cancel: true,
-    persistent: true
+    persistent: true,
   }).onOk(() => {
-    deleteCategory(category.id);
-  });
-};
+    deleteCategory(category.id)
+  })
+}
 
-const deleteCategory = async (id) => {
+async function deleteCategory(id) {
   try {
-    await categoryStore.deleteCategory(id);
-    await loadCategories();
-    $q.notify({
-      color: 'positive',
-      message: 'Category deleted successfully',
-      icon: 'check_circle'
-    });
+    await categoryStore.deleteCategory(id)
+    await loadCategories()
+    $q.notify({ color: 'positive', message: 'Categoria excluída.', icon: 'check_circle' })
   } catch (error) {
-    console.error('Error deleting category:', error);
     $q.notify({
       color: 'negative',
-      message: error.message || 'Failed to delete category',
-      icon: 'error'
-    });
+      message: 'Não foi possível excluir a categoria',
+      icon: 'error',
+    })
   }
-};
+}
 
-const loadCategories = async () => {
-  loading.value = true;
+async function loadCategories() {
+  loading.value = true
   try {
-    await categoryStore.fetchCategories();
-    categories.value = categoryStore.categories;
+    await categoryStore.fetchCategories()
+    categories.value = categoryStore.categories
   } catch (error) {
-    console.error('Error loading categories:', error);
     $q.notify({
       color: 'negative',
-      message: 'Failed to load categories',
-      icon: 'error'
-    });
+      message: 'Não foi possível carregar as categorias',
+      icon: 'error',
+    })
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
-// Lifecycle hooks
 onMounted(() => {
-  loadCategories();
-});
+  loadCategories()
+})
 </script>
-
-<style scoped>
-/* Add any custom styles here */
-</style>

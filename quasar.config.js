@@ -8,13 +8,18 @@ export default defineConfig((ctx) => {
   return {
     // https://v2.quasar.dev/quasar-cli-vite/prefetch-feature
     // preFetch: true,
+    
+    // Environment variables
+    env: {
+      APP_NAME: process.env.VITE_APP_NAME || 'Finance App'
+    },
 
     // app boot file (/src/boot)
     // --> boot files are part of "main.js"
     // https://v2.quasar.dev/quasar-cli-vite/boot-files
     boot: [
       'i18n',
-      'axios'
+      'storage'
     ],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#css
@@ -107,7 +112,7 @@ export default defineConfig((ctx) => {
       // directives: [],
 
       // Quasar plugins
-      plugins: []
+      plugins: ['Notify', 'Dialog', 'Loading']
     },
 
     // animations: 'all', // --- includes all animations
@@ -153,15 +158,42 @@ export default defineConfig((ctx) => {
 
     // https://v2.quasar.dev/quasar-cli-vite/developing-pwa/configuring-pwa
     pwa: {
-      workboxMode: 'GenerateSW' // 'GenerateSW' or 'InjectManifest'
+      workboxMode: 'GenerateSW', // 'GenerateSW' or 'InjectManifest'
       // swFilename: 'sw.js',
       // manifestFilename: 'manifest.json',
-      // extendManifestJson (json) {},
+      extendManifestJson: {
+        name: 'Finance App — Planejamento Financeiro',
+        short_name: 'Finance App',
+        description:
+          'Planejamento financeiro e gestão patrimonial 100% offline, com dados gravados em arquivos .txt.',
+        lang: 'pt-BR',
+        display: 'standalone',
+        orientation: 'portrait-primary',
+        background_color: '#0f172a',
+        theme_color: '#1e293b',
+      },
       // useCredentialsForManifestTag: true,
       // injectPwaMetaTags: false,
       // extendPWACustomSWConf (esbuildConf) {},
-      // extendGenerateSWOptions (cfg) {},
-      // extendInjectManifestOptions (cfg) {}
+      extendGenerateSWOptions: (cfg) => {
+        // Precisa globar todos os assets do build para o app abrir 100% offline.
+        cfg.globPatterns = [
+          '**/*.{js,css,html,ico,png,svg,woff,woff2,ttf,eot}',
+        ]
+        cfg.navigateFallback = 'index.html'
+        cfg.skipWaiting = true
+        cfg.clientsClaim = true
+        cfg.cleanupOutdatedCaches = true
+        cfg.runtimeCaching = [
+          {
+            urlPattern: ({ url }) => url.origin === self.location.origin,
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'finance-app-assets' },
+          },
+        ]
+        return cfg
+      }
+      // extendInjectManifestOptions (esbuildConf) {}
     },
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/developing-cordova-apps/configuring-cordova

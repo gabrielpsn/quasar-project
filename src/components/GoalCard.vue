@@ -29,7 +29,7 @@
           <q-menu auto-close>
             <q-list style="min-width: 150px">
               <q-item clickable @click="$emit('edit', goal)">
-                <q-item-section>Edit</q-item-section>
+                <q-item-section>Editar</q-item-section>
                 <q-item-section avatar>
                   <q-icon name="edit" />
                 </q-item-section>
@@ -39,7 +39,7 @@
                 clickable 
                 @click="markAsComplete"
               >
-                <q-item-section>Mark as Complete</q-item-section>
+                <q-item-section>Marcar como concluída</q-item-section>
                 <q-item-section avatar>
                   <q-icon name="check_circle" />
                 </q-item-section>
@@ -49,7 +49,7 @@
                 clickable 
                 @click="markAsIncomplete"
               >
-                <q-item-section>Mark as Incomplete</q-item-section>
+                <q-item-section>Marcar como não concluída</q-item-section>
                 <q-item-section avatar>
                   <q-icon name="refresh" />
                 </q-item-section>
@@ -60,7 +60,7 @@
                 @click="$emit('delete', goal)"
                 class="text-negative"
               >
-                <q-item-section>Delete</q-item-section>
+                <q-item-section>Excluir</q-item-section>
                 <q-item-section avatar>
                   <q-icon name="delete" color="negative" />
                 </q-item-section>
@@ -73,10 +73,10 @@
       <div class="q-mt-md">
         <div class="row justify-between items-center q-mb-xs">
           <div class="text-caption text-weight-medium">
-            Progress ({{ progressPercentage }}%)
+            Progresso ({{ progressPercentage }}%)
           </div>
           <div class="text-caption">
-            {{ formattedCurrentAmount }} of {{ formattedTargetAmount }}
+            {{ formattedCurrentAmount }} de {{ formattedTargetAmount }}
           </div>
         </div>
         <q-linear-progress
@@ -92,7 +92,7 @@
         <div class="text-caption">
           <q-icon name="event" size="xs" class="q-mr-xs" />
           {{ formattedTargetDate }}
-          <q-tooltip>Target Date</q-tooltip>
+          <q-tooltip>Data limite</q-tooltip>
         </div>
         
         <q-badge 
@@ -109,7 +109,7 @@
       <q-btn 
         flat 
         color="primary" 
-        label="Add Progress" 
+        label="Adicionar aporte" 
         icon="add"
         size="sm"
         @click="showAddProgressDialog = true"
@@ -120,7 +120,7 @@
     <q-dialog v-model="showAddProgressDialog" persistent>
       <q-card style="min-width: 350px">
         <q-card-section>
-          <div class="text-h6">Add Progress to "{{ goal.name }}"</div>
+          <div class="text-h6">Adicionar aporte em "{{ goal.name }}"</div>
         </q-card-section>
 
         <q-card-section class="q-pt-none">
@@ -128,25 +128,25 @@
             ref="amountInput"
             v-model.number="progressAmount"
             type="number"
-            label="Amount to Add"
-            prefix="$"
+            label="Valor a adicionar"
+            prefix="R$ "
             outlined
             dense
-            :rules="[val => val > 0 || 'Amount must be greater than 0']"
+            :rules="[val => val > 0 || 'O valor deve ser maior que zero']"
             @keyup.enter="addProgress"
           />
           
           <div class="q-mt-sm text-caption text-grey-7">
-            Current: {{ formattedCurrentAmount }} | 
-            Target: {{ formattedTargetAmount }} | 
-            Remaining: {{ formattedRemainingAmount }}
+            Atual: {{ formattedCurrentAmount }} | 
+            Alvo: {{ formattedTargetAmount }} | 
+            Falta: {{ formattedRemainingAmount }}
           </div>
         </q-card-section>
 
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" color="primary" v-close-popup />
+          <q-btn flat label="Cancelar" color="primary" v-close-popup />
           <q-btn 
-            label="Add" 
+            label="Adicionar" 
             color="primary" 
             @click="addProgress"
             :loading="addingProgress"
@@ -160,6 +160,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { useQuasar } from 'quasar';
+import { brl, dataBR } from 'src/utils/format';
 
 const props = defineProps({
   goal: {
@@ -197,25 +198,25 @@ const progressColor = computed(() => {
 });
 
 const statusText = computed(() => {
-  if (props.goal.achieved) return 'Completed';
+  if (props.goal.achieved) return 'Concluída';
   
   const today = new Date();
   const targetDate = new Date(props.goal.target_date);
   const daysRemaining = Math.ceil((targetDate - today) / (1000 * 60 * 60 * 24));
   
-  if (daysRemaining < 0) return 'Overdue';
-  if (daysRemaining === 0) return 'Due Today';
-  if (daysRemaining === 1) return 'Due Tomorrow';
-  if (daysRemaining <= 7) return `Due in ${daysRemaining} days`;
-  return 'On Track';
+  if (daysRemaining < 0) return 'Atrasada';
+  if (daysRemaining === 0) return 'Vence hoje';
+  if (daysRemaining === 1) return 'Vence amanhã';
+  if (daysRemaining <= 7) return `Vence em ${daysRemaining} dias`;
+  return 'Em dia';
 });
 
 const statusColor = computed(() => {
   if (props.goal.achieved) return 'positive';
   
   const status = statusText.value;
-  if (status === 'Overdue') return 'negative';
-  if (status === 'Due Today' || status === 'Due Tomorrow' || status.includes('days')) return 'orange';
+  if (status === 'Atrasada') return 'negative';
+  if (status === 'Vence hoje' || status === 'Vence amanhã' || status.includes('dias')) return 'orange';
   return 'primary';
 });
 
@@ -234,25 +235,17 @@ const formattedRemainingAmount = computed(() => {
 
 const formattedTargetDate = computed(() => {
   if (!props.goal.target_date) return '';
-  const options = { year: 'numeric', month: 'short', day: 'numeric' };
-  return new Date(props.goal.target_date).toLocaleDateString(undefined, options);
+  return dataBR(props.goal.target_date, { month: 'short' });
 });
 
 // Methods
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(value || 0);
-};
+const formatCurrency = (value) => brl(value);
 
 const addProgress = async () => {
   if (!progressAmount.value || progressAmount.value <= 0) {
     $q.notify({
       color: 'warning',
-      message: 'Please enter a valid amount',
+      message: 'Informe um valor válido',
       icon: 'warning'
     });
     return;
@@ -266,14 +259,14 @@ const addProgress = async () => {
     
     $q.notify({
       color: 'positive',
-      message: 'Progress added successfully',
+      message: 'Aporte registrado.',
       icon: 'check_circle'
     });
   } catch (error) {
     console.error('Error adding progress:', error);
     $q.notify({
       color: 'negative',
-      message: 'Failed to add progress',
+      message: 'Não foi possível registrar o aporte',
       icon: 'error'
     });
   } finally {

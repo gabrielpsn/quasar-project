@@ -1,11 +1,11 @@
 <template>
   <q-page class="q-pa-md">
     <div class="row items-center justify-between q-mb-md">
-      <div class="text-h5">Financial Goals</div>
+      <div class="text-h5">Metas financeiras</div>
       <q-btn
         color="primary"
         icon="add"
-        label="Add Goal"
+        label="Nova meta"
         @click="showGoalForm()"
       />
     </div>
@@ -19,9 +19,9 @@
       align="left"
       narrow-indicator
     >
-      <q-tab name="active" label="Active" />
-      <q-tab name="completed" label="Completed" />
-      <q-tab name="all" label="All Goals" />
+      <q-tab name="active" label="Ativas" />
+      <q-tab name="completed" label="Concluídas" />
+      <q-tab name="all" label="Todas" />
     </q-tabs>
 
     <q-separator />
@@ -34,9 +34,9 @@
         </div>
         <div v-else-if="activeGoals.length === 0" class="text-center q-pa-lg">
           <q-icon name="emoji_events" size="4rem" color="grey-4" class="q-mb-sm" />
-          <div class="text-h6 text-grey-7">No active goals</div>
+          <div class="text-h6 text-grey-7">Nenhuma meta ativa</div>
           <div class="text-subtitle2 text-grey-6 q-mb-md">
-            Start by creating your first financial goal
+            Comece criando sua primeira meta financeira
           </div>
           <q-btn
             color="primary"
@@ -69,9 +69,9 @@
         </div>
         <div v-else-if="completedGoals.length === 0" class="text-center q-pa-lg">
           <q-icon name="emoji_events" size="4rem" color="grey-4" class="q-mb-sm" />
-          <div class="text-h6 text-grey-7">No completed goals yet</div>
+          <div class="text-h6 text-grey-7">Nenhuma meta concluída</div>
           <div class="text-subtitle2 text-grey-6">
-            Complete some goals to see them here
+            Conclua suas metas para vê-las aqui
           </div>
         </div>
         <div v-else class="row q-col-gutter-md q-mt-sm">
@@ -98,9 +98,9 @@
         </div>
         <div v-else-if="allGoals.length === 0" class="text-center q-pa-lg">
           <q-icon name="emoji_events" size="4rem" color="grey-4" class="q-mb-sm" />
-          <div class="text-h6 text-grey-7">No goals yet</div>
+          <div class="text-h6 text-grey-7">Nenhuma meta ainda</div>
           <div class="text-subtitle2 text-grey-6 q-mb-md">
-            Start by creating your first financial goal
+            Comece criando sua primeira meta financeira
           </div>
           <q-btn
             color="primary"
@@ -132,7 +132,7 @@
       <q-card style="min-width: 400px">
         <q-form @submit="saveGoal">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">{{ form.id ? 'Edit' : 'Add' }} Goal</div>
+            <div class="text-h6">{{ form.id ? 'Editar' : 'Nova' }} meta</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
@@ -141,26 +141,26 @@
             <div class="q-gutter-y-md">
               <q-input
                 v-model="form.name"
-                label="Goal Name"
+                label="Nome da meta"
                 outlined
                 dense
-                :rules="[val => !!val || 'Name is required']"
+                :rules="[val => !!val || 'O nome é obrigatório']"
               />
 
               <q-select
                 v-model="form.icon"
                 :options="iconOptions"
-                label="Icon"
+                label="Ícone"
                 outlined
                 dense
                 emit-value
                 map-options
-                :rules="[val => !!val || 'Icon is required']"
+                :rules="[val => !!val || 'O ícone é obrigatório']"
               >
                 <template v-slot:selected>
                   <div class="row items-center">
                     <q-icon :name="form.icon || 'emoji_events'" class="q-mr-sm" />
-                    {{ form.icon || 'Select an icon' }}
+                    {{ form.icon || 'Selecione um ícone' }}
                   </div>
                 </template>
                 <template v-slot:option="{ itemProps, opt, selected }">
@@ -181,12 +181,12 @@
               <q-select
                 v-model="form.color"
                 :options="colorOptions"
-                label="Color"
+                label="Cor"
                 outlined
                 dense
                 emit-value
                 map-options
-                :rules="[val => !!val || 'Color is required']"
+                :rules="[val => !!val || 'A cor é obrigatória']"
               >
                 <template v-slot:selected>
                   <div class="row items-center">
@@ -195,7 +195,7 @@
                       :color="form.color || 'grey-6'" 
                       class="q-mr-sm" 
                     />
-                    {{ form.color ? form.color.replace('-', ' ') : 'Select a color' }}
+                    {{ form.color ? form.color.replace('-', ' ') : 'Selecione uma cor' }}
                   </div>
                 </template>
                 <template v-slot:option="{ itemProps, opt, selected }">
@@ -216,35 +216,35 @@
               <q-input
                 v-model.number="form.target_amount"
                 type="number"
-                label="Target Amount"
-                prefix="$"
+                label="Valor da meta"
+                prefix="R$ "
                 outlined
                 dense
-                :rules="[val => val > 0 || 'Amount must be greater than 0']"
+                :rules="[val => val > 0 || 'O valor deve ser maior que zero']"
               />
 
               <q-input
                 v-model.number="form.current_amount"
                 type="number"
-                label="Current Amount"
-                prefix="$"
+                label="Valor atual"
+                prefix="R$ "
                 outlined
                 dense
-                :rules="[val => val >= 0 || 'Amount cannot be negative']"
+                :rules="[val => val >= 0 || 'O valor não pode ser negativo']"
               />
 
               <q-input
                 v-model="form.target_date"
-                label="Target Date"
+                label="Data limite"
                 type="date"
                 outlined
                 dense
-                :rules="[val => !!val || 'Target date is required']"
+                :rules="[val => !!val || 'A data limite é obrigatória']"
               />
 
               <q-input
                 v-model="form.description"
-                label="Description (Optional)"
+                label="Descrição (opcional)"
                 type="textarea"
                 outlined
                 dense
@@ -254,10 +254,10 @@
           </q-card-section>
 
           <q-card-actions align="right">
-            <q-btn flat label="Cancel" color="primary" v-close-popup />
+            <q-btn flat label="Cancelar" color="primary" v-close-popup />
             <q-btn
               type="submit"
-              :label="form.id ? 'Update' : 'Create'"
+              :label="form.id ? 'Salvar' : 'Criar'"
               color="primary"
               :loading="saving"
             />
@@ -298,38 +298,38 @@ const form = ref({
 
 // Options
 const iconOptions = [
-  { label: 'Trophy', value: 'emoji_events' },
-  { label: 'Piggy Bank', value: 'savings' },
-  { label: 'House', value: 'home' },
-  { label: 'Car', value: 'directions_car' },
-  { label: 'Plane', value: 'flight' },
-  { label: 'Education', value: 'school' },
-  { label: 'Health', value: 'favorite' },
-  { label: 'Gift', value: 'card_giftcard' },
-  { label: 'Shopping', value: 'shopping_bag' },
-  { label: 'Other', value: 'category' }
+  { label: 'Troféu', value: 'emoji_events' },
+  { label: 'Cofrinho', value: 'savings' },
+  { label: 'Casa', value: 'home' },
+  { label: 'Carro', value: 'directions_car' },
+  { label: 'Viagem', value: 'flight' },
+  { label: 'Educação', value: 'school' },
+  { label: 'Saúde', value: 'favorite' },
+  { label: 'Presente', value: 'card_giftcard' },
+  { label: 'Compras', value: 'shopping_bag' },
+  { label: 'Outra', value: 'category' }
 ];
 
 const colorOptions = [
-  { label: 'Red', value: 'red' },
-  { label: 'Pink', value: 'pink' },
-  { label: 'Purple', value: 'purple' },
-  { label: 'Deep Purple', value: 'deep-purple' },
-  { label: 'Indigo', value: 'indigo' },
-  { label: 'Blue', value: 'blue' },
-  { label: 'Light Blue', value: 'light-blue' },
-  { label: 'Cyan', value: 'cyan' },
-  { label: 'Teal', value: 'teal' },
-  { label: 'Green', value: 'green' },
-  { label: 'Light Green', value: 'light-green' },
-  { label: 'Lime', value: 'lime' },
-  { label: 'Yellow', value: 'yellow' },
-  { label: 'Amber', value: 'amber' },
-  { label: 'Orange', value: 'orange' },
-  { label: 'Deep Orange', value: 'deep-orange' },
-  { label: 'Brown', value: 'brown' },
-  { label: 'Grey', value: 'grey' },
-  { label: 'Blue Grey', value: 'blue-grey' }
+  { label: 'Vermelho', value: 'red' },
+  { label: 'Rosa', value: 'pink' },
+  { label: 'Roxo', value: 'purple' },
+  { label: 'Roxo escuro', value: 'deep-purple' },
+  { label: 'Índigo', value: 'indigo' },
+  { label: 'Azul', value: 'blue' },
+  { label: 'Azul claro', value: 'light-blue' },
+  { label: 'Ciano', value: 'cyan' },
+  { label: 'Verde-azulado', value: 'teal' },
+  { label: 'Verde', value: 'green' },
+  { label: 'Verde claro', value: 'light-green' },
+  { label: 'Lima', value: 'lime' },
+  { label: 'Amarelo', value: 'yellow' },
+  { label: 'Âmbar', value: 'amber' },
+  { label: 'Laranja', value: 'orange' },
+  { label: 'Laranja escuro', value: 'deep-orange' },
+  { label: 'Marrom', value: 'brown' },
+  { label: 'Cinza', value: 'grey' },
+  { label: 'Cinza azulado', value: 'blue-grey' }
 ];
 
 // Computed
@@ -371,7 +371,7 @@ const showGoalForm = (goal = null) => {
       description: goal.description || '',
       target_amount: parseFloat(goal.target_amount),
       current_amount: parseFloat(goal.current_amount),
-      target_date: goal.target_date.split('T')[0],
+      target_date: goal.target_date ? String(goal.target_date).split('T')[0] : '',
       icon: goal.icon || 'emoji_events',
       color: goal.color || 'primary',
       achieved: goal.achieved || false
@@ -405,7 +405,7 @@ const saveGoal = async () => {
       await goalStore.updateGoal(goalData);
       $q.notify({
         color: 'positive',
-        message: 'Goal updated successfully',
+        message: 'Meta atualizada.',
         icon: 'check_circle'
       });
     } else {
@@ -413,7 +413,7 @@ const saveGoal = async () => {
       await goalStore.createGoal(goalData);
       $q.notify({
         color: 'positive',
-        message: 'Goal created successfully',
+        message: 'Meta criada.',
         icon: 'check_circle'
       });
     }
@@ -425,7 +425,7 @@ const saveGoal = async () => {
     console.error('Error saving goal:', error);
     $q.notify({
       color: 'negative',
-      message: error.message || 'Failed to save goal',
+      message: error.message || 'Não foi possível salvar a meta',
       icon: 'error'
     });
   } finally {
@@ -435,8 +435,8 @@ const saveGoal = async () => {
 
 const confirmDeleteGoal = (goal) => {
   $q.dialog({
-    title: 'Confirm Delete',
-    message: `Are you sure you want to delete "${goal.name}"?`,
+    title: 'Confirmar exclusão',
+    message: `Tem certeza que deseja excluir "${goal.name}"?`,
     cancel: true,
     persistent: true,
   }).onOk(() => {
@@ -449,7 +449,7 @@ const deleteGoal = async (id) => {
     await goalStore.deleteGoal(id);
     $q.notify({
       color: 'positive',
-      message: 'Goal deleted successfully',
+      message: 'Meta excluída.',
       icon: 'check_circle'
     });
     await loadGoals();
@@ -457,7 +457,7 @@ const deleteGoal = async (id) => {
     console.error('Error deleting goal:', error);
     $q.notify({
       color: 'negative',
-      message: 'Failed to delete goal',
+      message: 'Não foi possível excluir a meta',
       icon: 'error'
     });
   }
@@ -473,14 +473,14 @@ const updateGoalProgress = async (goal, amount) => {
     
     $q.notify({
       color: 'positive',
-      message: 'Progress updated successfully',
+      message: 'Aporte atualizado.',
       icon: 'check_circle'
     });
   } catch (error) {
     console.error('Error updating goal progress:', error);
     $q.notify({
       color: 'negative',
-      message: 'Failed to update goal progress',
+      message: 'Não foi possível atualizar o aporte',
       icon: 'error'
     });
   }
@@ -493,14 +493,14 @@ const toggleGoalStatus = async (goal) => {
     
     $q.notify({
       color: 'positive',
-      message: goal.achieved ? 'Goal marked as active' : 'Goal marked as completed',
+      message: goal.achieved ? 'Meta marcada como ativa' : 'Meta marcada como concluída',
       icon: 'check_circle'
     });
   } catch (error) {
     console.error('Error toggling goal status:', error);
     $q.notify({
       color: 'negative',
-      message: 'Failed to update goal status',
+      message: 'Não foi possível atualizar o status da meta',
       icon: 'error'
     });
   }
@@ -514,7 +514,7 @@ const loadGoals = async () => {
     console.error('Error loading goals:', error);
     $q.notify({
       color: 'negative',
-      message: 'Failed to load goals',
+      message: 'Não foi possível carregar as metas',
       icon: 'error'
     });
   } finally {

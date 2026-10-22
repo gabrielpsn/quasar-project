@@ -1,72 +1,74 @@
 <template>
   <q-page class="q-pa-md">
+    <div class="row items-center justify-between q-mb-md">
+      <div>
+        <div class="text-h5">Painel</div>
+        <div class="text-caption text-grey-8">{{ mesRotulo }} · 100% offline, dados em arquivos .txt</div>
+      </div>
+      <q-btn color="primary" icon="calendar_month" label="Fluxo de caixa" to="/fluxo-caixa" />
+    </div>
+
     <div class="row q-col-gutter-md">
-      <!-- Balance Summary Card -->
+      <!-- Saldo devedor -->
       <div class="col-12 col-md-4">
         <q-card class="bg-primary text-white">
           <q-card-section>
-            <div class="text-h6">Total Balance</div>
-            <div class="text-h4">{{ formatCurrency(totalBalance) }}</div>
+            <div class="text-subtitle2">Saldo devedor do mês</div>
+            <div class="text-h4">{{ brl(resumo?.saldoDevedor) }}</div>
+            <div class="text-caption q-mt-sm">
+              {{ resumo?.pago ? `${brl(resumo.pago)} já pago` : 'Nada pago ainda' }}
+            </div>
           </q-card-section>
           <q-separator dark />
           <q-card-actions align="around">
-            <q-btn flat icon="add" label="Add Income" @click="showAddTransaction('income')" />
-            <q-btn flat icon="remove" label="Add Expense" @click="showAddTransaction('expense')" />
+            <q-btn flat icon="add" label="Nova entrada" to="/fluxo-caixa" />
+            <q-btn flat icon="remove" label="Novo gasto" to="/fluxo-caixa" />
           </q-card-actions>
         </q-card>
       </div>
 
-      <!-- Income Card -->
+      <!-- Renda -->
       <div class="col-12 col-md-4">
         <q-card class="bg-positive text-white">
           <q-card-section>
-            <div class="text-h6">Income (This Month)</div>
-            <div class="text-h4">{{ formatCurrency(monthlyIncome) }}</div>
+            <div class="text-subtitle2">Renda do mês</div>
+            <div class="text-h4">{{ brl(resumo?.renda) }}</div>
             <q-linear-progress
-              :value="0.7"
+              :value="rendaProgress"
               stripe
               rounded
               class="q-mt-sm"
               color="white"
               track-color="transparent"
             />
+            <div class="text-caption q-mt-sm">
+              Previsto para gastar: {{ brl(resumo?.totalItens) }}
+            </div>
           </q-card-section>
         </q-card>
       </div>
 
-      <!-- Expenses Card -->
+      <!-- Sobra -->
       <div class="col-12 col-md-4">
-        <q-card class="bg-negative text-white">
+        <q-card :class="(resumo?.sobra ?? 0) >= 0 ? 'bg-teal text-white' : 'bg-negative text-white'">
           <q-card-section>
-            <div class="text-h6">Expenses (This Month)</div>
-            <div class="text-h4">{{ formatCurrency(monthlyExpenses) }}</div>
-            <q-linear-progress
-              :value="0.5"
-              stripe
-              rounded
-              class="q-mt-sm"
-              color="white"
-              track-color="transparent"
-            />
+            <div class="text-subtitle2">Sobra estimada</div>
+            <div class="text-h4">{{ brl(resumo?.sobra) }}</div>
+            <div class="text-caption q-mt-sm">
+              Pendente: {{ brl(resumo?.pendente) }}
+            </div>
           </q-card-section>
         </q-card>
       </div>
 
-      <!-- Recent Transactions -->
+      <!-- Lançamentos recentes -->
       <div class="col-12">
-        <q-card>
+        <q-card flat bordered class="rounded-borders">
           <q-card-section class="row items-center">
-            <div class="text-h6">Recent Transactions</div>
+            <div class="text-subtitle1 text-weight-medium">Lançamentos recentes</div>
             <q-space />
-            <q-btn
-              flat
-              round
-              dense
-              icon="refresh"
-              @click="refreshTransactions"
-              :loading="loading"
-            >
-              <q-tooltip>Refresh</q-tooltip>
+            <q-btn flat round dense icon="refresh" :loading="loading" @click="loadData">
+              <q-tooltip>Atualizar</q-tooltip>
             </q-btn>
           </q-card-section>
 
@@ -74,166 +76,184 @@
 
           <q-card-section v-if="loading" class="text-center q-pa-xl">
             <q-spinner color="primary" size="3em" />
-            <div class="q-mt-sm">Loading transactions...</div>
+            <div class="text-caption q-mt-sm">Carregando…</div>
           </q-card-section>
 
-          <q-card-section v-else-if="recentTransactions.length === 0" class="text-center q-pa-xl text-grey">
-            <q-icon name="receipt" size="3em" />
-            <div class="text-h6 q-mt-sm">No transactions yet</div>
-            <q-btn
-              color="primary"
-              label="Add your first transaction"
-              class="q-mt-md"
-              @click="showAddTransaction('expense')"
-            />
+          <q-card-section v-else-if="!recent.length" class="text-center text-grey q-pa-xl">
+            <q-icon name="receipt_long" size="3em" />
+            <div class="text-h6 q-mt-sm">Nenhum lançamento ainda</div>
+            <q-btn color="primary" label="Ir para o fluxo de caixa" class="q-mt-md" to="/fluxo-caixa" />
           </q-card-section>
-
 
           <q-list v-else separator>
-            <q-item v-for="transaction in recentTransactions" :key="transaction.id" class="q-py-md">
+            <q-item v-for="item in recent" :key="item.id" class="q-py-md">
               <q-item-section avatar>
                 <q-avatar
-                  :color="transaction.type === 'income' ? 'positive' : 'negative'"
+                  :color="item.type === 'income' ? 'positive' : 'negative'"
                   text-color="white"
-                  :icon="transaction.type === 'income' ? 'south_east' : 'north_east'"
+                  :icon="item.type === 'income' ? 'south_east' : 'north_east'"
                 />
               </q-item-section>
 
               <q-item-section>
-                <q-item-label>{{ transaction.description }}</q-item-label>
+                <q-item-label>{{ item.desc }}</q-item-label>
                 <q-item-label caption lines="1">
-                  {{ formatDate(transaction.date) }} • {{ transaction.category?.name || 'Uncategorized' }}
+                  {{ dataBR(item.date) }} · {{ item.category }}
                 </q-item-label>
               </q-item-section>
 
               <q-item-section side>
-                <q-item-label :class="{ 'text-positive': transaction.type === 'income', 'text-negative': transaction.type === 'expense' }">
-                  {{ transaction.type === 'income' ? '+' : '-' }}{{ formatCurrency(transaction.amount) }}
+                <q-item-label :class="item.type === 'income' ? 'text-positive' : 'text-negative'">
+                  {{ item.type === 'income' ? '+' : '-' }}{{ brl(item.amount) }}
                 </q-item-label>
-              </q-item-section>
-
-              <q-item-section side>
-                <q-btn flat round dense icon="more_vert">
-                  <q-menu auto-close>
-                    <q-list style="min-width: 150px">
-                      <q-item clickable @click="editTransaction(transaction)">
-                        <q-item-section>Edit</q-item-section>
-                        <q-item-section avatar>
-                          <q-icon name="edit" />
-                        </q-item-section>
-                      </q-item>
-                      <q-item clickable @click="confirmDeleteTransaction(transaction)">
-                        <q-item-section>Delete</q-item-section>
-                        <q-item-section avatar>
-                          <q-icon name="delete" />
-                        </q-item-section>
-                      </q-item>
-                    </q-list>
-                  </q-menu>
-                </q-btn>
               </q-item-section>
             </q-item>
           </q-list>
 
-          <q-card-actions align="right" v-if="recentTransactions.length > 0">
-            <q-btn flat color="primary" label="View All" to="/transactions" />
+          <q-card-actions align="right" v-if="recent.length">
+            <q-btn flat color="primary" label="Ver tudo" to="/fluxo-caixa" />
           </q-card-actions>
         </q-card>
       </div>
 
-      <!-- Goals Progress -->
+      <!-- Metas -->
       <div class="col-12 col-md-6">
-        <q-card>
+        <q-card flat bordered class="rounded-borders">
           <q-card-section>
-            <div class="text-h6">Goals Progress</div>
+            <div class="text-subtitle1 text-weight-medium">Progresso das metas</div>
           </q-card-section>
-          <q-card-section v-if="goals.length === 0" class="text-center text-grey q-pa-xl">
+          <q-separator />
+          <q-card-section v-if="!goals.length" class="text-center text-grey q-pa-xl">
             <q-icon name="flag" size="3em" />
-            <div class="text-h6 q-mt-sm">No goals yet</div>
-            <q-btn
-              color="primary"
-              label="Create your first goal"
-              class="q-mt-md"
-              to="/goals"
-            />
+            <div class="text-h6 q-mt-sm">Nenhuma meta ainda</div>
+            <q-btn color="primary" label="Criar meta" class="q-mt-md" to="/goals" />
           </q-card-section>
           <q-card-section v-else>
-            <q-list>
-              <q-item v-for="goal in goals" :key="goal.id" class="q-px-none">
-                <q-item-section>
-                  <div class="row items-center">
-                    <div class="col-12 col-md-4">
-                      <div class="text-weight-medium">{{ goal.name }}</div>
-                      <div class="text-caption text-grey">
-                        {{ formatCurrency(goal.current_amount) }} of {{ formatCurrency(goal.target_amount) }}
-                      </div>
-                    </div>
-                    <div class="col-12 col-md-8">
-                      <q-linear-progress
-                        :value="goal.progress"
-                        stripe
-                        rounded
-                        :color="getProgressColor(goal.progress)"
-                        class="q-mt-sm"
-                      >
-                        <div class="absolute-full flex flex-center">
-                          <q-badge color="white" :label="Math.round(goal.progress * 100) + '%'" />
-                        </div>
-                      </q-linear-progress>
-                    </div>
+            <div v-for="goal in goals" :key="goal.id" class="q-mb-md">
+              <div class="row items-center">
+                <div class="col-12 col-md-4">
+                  <div class="text-weight-medium">{{ goal.name }}</div>
+                  <div class="text-caption text-grey-8">
+                    {{ brl(goal.current_amount) }} de {{ brl(goal.target_amount) }}
                   </div>
-                </q-item-section>
-              </q-item>
-            </q-list>
+                </div>
+                <div class="col-12 col-md-8">
+                  <q-linear-progress
+                    :value="goalProgress(goal)"
+                    stripe
+                    rounded
+                    :color="progressColor(goal)"
+                    class="q-mt-sm"
+                  >
+                    <div class="absolute-full flex flex-center">
+                      <q-badge color="white" :label="`${Math.round(goalProgress(goal) * 100)}%`" />
+                    </div>
+                  </q-linear-progress>
+                </div>
+              </div>
+            </div>
             <div class="text-right q-mt-md">
-              <q-btn flat color="primary" label="View All" to="/goals" />
+              <q-btn flat color="primary" label="Ver todas" to="/goals" />
             </div>
           </q-card-section>
         </q-card>
       </div>
 
-      <!-- Categories Overview -->
+      <!-- Gastos por categoria -->
       <div class="col-12 col-md-6">
-        <q-card>
+        <q-card flat bordered class="rounded-borders">
           <q-card-section>
-            <div class="text-h6">Spending by Category</div>
+            <div class="text-subtitle1 text-weight-medium">Gastos por categoria</div>
           </q-card-section>
-          <q-card-section v-if="categorySpending.length === 0" class="text-center text-grey q-pa-xl">
+          <q-separator />
+          <q-card-section v-if="!gastosPorCategoria.length" class="text-center text-grey q-pa-xl">
             <q-icon name="category" size="3em" />
-            <div class="text-h6 q-mt-sm">No spending data yet</div>
+            <div class="text-h6 q-mt-sm">Sem dados de gastos</div>
           </q-card-section>
           <q-card-section v-else>
-            <div v-for="category in categorySpending" :key="category.id" class="q-mb-sm">
+            <div v-for="categoria in gastosPorCategoria" :key="categoria.categoria" class="q-mb-sm">
               <div class="row items-center">
-                <div class="col-4">
-                  <div class="row items-center">
-                    <q-avatar
-                      :color="category.color || 'primary'"
-                      text-color="white"
-                      size="sm"
-                      class="q-mr-sm"
-                    >
-                      <q-icon :name="category.icon || 'category'" />
-                    </q-avatar>
-                    <span>{{ category.name }}</span>
-                  </div>
+                <div class="col-4 row items-center">
+                  <q-avatar :color="corCategoria(categoria.categoria)" text-color="white" size="sm" class="q-mr-sm">
+                    <q-icon name="label" />
+                  </q-avatar>
+                  <span class="text-body2">{{ categoria.categoria }}</span>
                 </div>
                 <div class="col-5">
                   <q-linear-progress
-                    :value="category.percentage / 100"
-                    :color="category.color || 'primary'"
+                    :value="percentualCategoria(categoria)"
+                    :color="corCategoria(categoria.categoria)"
                     class="q-mx-sm"
                     rounded
                   />
                 </div>
-                <div class="col-3 text-right">
-                  {{ formatCurrency(category.amount) }}
-                </div>
+                <div class="col-3 text-right text-body2">{{ brl(categoria.total) }}</div>
               </div>
             </div>
             <div class="text-right q-mt-md">
-              <q-btn flat color="primary" label="View All" to="/categories" />
+              <q-btn flat color="primary" label="Ver categorias" to="/categories" />
             </div>
+          </q-card-section>
+        </q-card>
+      </div>
+
+      <!-- Fundo de reserva -->
+      <div class="col-12">
+        <q-card flat bordered class="rounded-borders">
+          <q-card-section class="row items-center">
+            <div class="text-subtitle1 text-weight-medium">
+              <q-icon name="savings" class="q-mr-sm" />
+              Fundo de reserva
+            </div>
+            <q-space />
+            <q-btn flat color="primary" label="Ajustar" to="/settings" />
+          </q-card-section>
+          <q-separator />
+          <q-card-section>
+            <div class="row q-col-gutter-md items-center">
+              <div class="col-12 col-md-4">
+                <div class="text-h5">{{ brl(reserva.valorAtual) }}</div>
+                <div class="text-caption text-grey-8">
+                  Meta: {{ brl(metaReserva) }} · {{ reserva.mesesCobertura }} meses de despesas
+                </div>
+                <div class="text-caption text-grey-7">
+                  Aporte: {{ brl(reserva.aporteMensal) }}/mês
+                </div>
+              </div>
+              <div class="col-12 col-md-8">
+                <q-linear-progress
+                  :value="progressoReserva"
+                  :color="cobertura < 3 ? 'warning' : 'positive'"
+                  height="12px"
+                  rounded
+                />
+                <div class="row justify-between text-caption text-grey-8 q-mt-xs">
+                  <span>
+                    {{ numero(cobertura, 1) }} meses de cobertura
+                    <span v-if="despesaMedia"> · despesa média {{ brl(despesaMedia) }}/mês</span>
+                  </span>
+                  <span>{{ percentual(progressoReserva) }} da meta</span>
+                </div>
+              </div>
+            </div>
+            <q-banner
+              v-if="despesaMedia && cobertura < 3"
+              dense
+              rounded
+              class="q-mt-md bg-orange-1 text-orange-10"
+            >
+              <q-icon name="warning" class="q-mr-sm" />
+              Reserva abaixo de 3 meses de despesas. Priorize reforçar o fundo de emergência.
+            </q-banner>
+            <q-banner
+              v-else-if="despesaMedia"
+              dense
+              rounded
+              class="q-mt-md bg-green-1 text-green-10"
+            >
+              <q-icon name="check_circle" class="q-mr-sm" />
+              Reserva saudável para imprevistos.
+            </q-banner>
           </q-card-section>
         </q-card>
       </div>
@@ -242,179 +262,99 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useQuasar } from 'quasar';
-import { useTransactionStore } from 'src/stores/transactions';
-import { useGoalStore } from 'src/stores/goals';
-import { useCategoryStore } from 'src/stores/categories';
+import { computed, onMounted, ref } from 'vue'
+import { usePlanStore } from 'src/stores/plan'
+import { useGoalStore } from 'src/stores/goals'
+import { useTransactionStore } from 'src/stores/transactions'
+import { useSettingsStore } from 'src/stores/settings'
+import { brl, dataBR, numero, percentual } from 'src/utils/format'
+import { monthLabel } from 'src/utils/dates'
+import { totaisPorCategoria } from 'src/services/calc/cashflow'
 
-const $q = useQuasar();
-const transactionStore = useTransactionStore();
-const goalStore = useGoalStore();
-const categoryStore = useCategoryStore();
+const plan = usePlanStore()
+const goalsStore = useGoalStore()
+const transactionStore = useTransactionStore()
+const settingsStore = useSettingsStore()
 
-// State
-const loading = ref(true);
-const recentTransactions = ref([]);
-const goals = ref([]);
-const categorySpending = ref([]);
+const loading = ref(true)
+const recent = ref([])
 
-// Mock data - replace with actual API calls
-const totalBalance = ref(12500.75);
-const monthlyIncome = ref(3500.50);
-const monthlyExpenses = ref(1875.25);
+const mes = computed(() => plan.mesAtual)
+const resumo = computed(() => plan.resumoAtual)
+const mesRotulo = computed(() => mes.value?.rotulo || monthLabel(plan.mesAtualId || ''))
 
-// Format currency
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(value || 0);
-};
+const goals = computed(() => goalsStore.goals.slice(0, 4))
+const gastosPorCategoria = computed(() => totaisPorCategoria(mes.value, 'saida'))
 
-// Format date
-const formatDate = (dateString) => {
-  if (!dateString) return '';
-  const options = { year: 'numeric', month: 'short', day: 'numeric' };
-  return new Date(dateString).toLocaleDateString(undefined, options);
-};
+const reserva = computed(() => settingsStore.reserva)
 
-// Get progress color based on percentage
-const getProgressColor = (progress) => {
-  if (progress >= 1) return 'positive';
-  if (progress >= 0.7) return 'warning';
-  return 'primary';
-};
+const despesaMedia = computed(() => {
+  const despesas = plan.meses
+    .map((m) => (m.itens || []).reduce((acc, item) => acc + (Number(item.valor) || 0), 0))
+    .filter((total) => total > 0)
+  const ultimas = despesas.slice(-3)
+  if (!ultimas.length) return 0
+  return ultimas.reduce((acc, total) => acc + total, 0) / ultimas.length
+})
 
-// Show add transaction dialog
-const showAddTransaction = (type) => {
-  // This will be implemented with the transaction form component
-  console.log('Add transaction:', type);
-};
+const cobertura = computed(() => {
+  if (!despesaMedia.value) return 0
+  return (Number(reserva.value.valorAtual) || 0) / despesaMedia.value
+})
 
-// Edit transaction
-const editTransaction = (transaction) => {
-  // This will be implemented with the transaction form component
-  console.log('Edit transaction:', transaction);
-};
+const metaReserva = computed(() =>
+  Math.round(despesaMedia.value * (Number(reserva.value.mesesCobertura) || 6) * 100) / 100
+)
 
-// Confirm delete transaction
-const confirmDeleteTransaction = (transaction) => {
-  $q.dialog({
-    title: 'Confirm Delete',
-    message: `Are you sure you want to delete "${transaction.description}"?`,
-    cancel: true,
-    persistent: true,
-  }).onOk(() => {
-    deleteTransaction(transaction.id);
-  });
-};
+const progressoReserva = computed(() => {
+  if (!metaReserva.value) return 0
+  return Math.min(1, (Number(reserva.value.valorAtual) || 0) / metaReserva.value)
+})
 
-// Delete transaction
-const deleteTransaction = async (id) => {
-  try {
-    // Call API to delete transaction
-    await transactionStore.deleteTransaction(id);
-    $q.notify({
-      color: 'positive',
-      message: 'Transaction deleted successfully',
-      icon: 'check_circle',
-    });
-    await loadData();
-  } catch (error) {
-    console.error('Error deleting transaction:', error);
-    $q.notify({
-      color: 'negative',
-      message: 'Failed to delete transaction',
-      icon: 'error',
-    });
+const rendaProgress = computed(() => {
+  const renda = Number(resumo.value?.renda) || 0
+  const itens = Number(resumo.value?.totalItens) || 0
+  if (!renda) return 0
+  return Math.min(1, itens / renda)
+})
+
+function goalProgress(goal) {
+  if (!goal.target_amount) return 0
+  return Math.min(1, (goal.current_amount || 0) / goal.target_amount)
+}
+
+function progressColor(goal) {
+  const p = goalProgress(goal)
+  if (p >= 1) return 'positive'
+  if (p >= 0.7) return 'warning'
+  return 'primary'
+}
+
+function corCategoria(categoria) {
+  const mapa = {
+    Fixo: 'blue',
+    Variável: 'teal',
+    Cartão: 'indigo',
+    Empréstimo: 'amber',
   }
-};
+  return mapa[categoria] || 'grey-7'
+}
 
-// Refresh transactions
-const refreshTransactions = async () => {
-  loading.value = true;
+function percentualCategoria(categoria) {
+  const total = gastosPorCategoria.value.reduce((acc, c) => acc + c.total, 0)
+  if (!total) return 0
+  return categoria.total / total
+}
+
+async function loadData() {
+  loading.value = true
   try {
-    await loadData();
-    $q.notify({
-      color: 'positive',
-      message: 'Data refreshed',
-      icon: 'refresh',
-    });
-  } catch (error) {
-    console.error('Error refreshing data:', error);
+    await Promise.all([plan.init(), goalsStore.init(), transactionStore.init(), settingsStore.init()])
+    recent.value = transactionStore.recentTransactions.slice(0, 6)
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
-// Load dashboard data
-const loadData = async () => {
-  try {
-    // Load recent transactions
-    const transactions = await transactionStore.fetchRecentTransactions();
-    recentTransactions.value = transactions || [];
-
-    // Load goals
-    const goalsData = await goalStore.fetchGoals();
-    goals.value = (goalsData || []).map(goal => ({
-      ...goal,
-      progress: Math.min(goal.current_amount / goal.target_amount, 1)
-    }));
-
-    // Load category spending
-    const categories = await categoryStore.fetchCategories();
-    const spending = await transactionStore.getCategorySpending();
-    
-    // Calculate total spending for percentages
-    const totalSpending = spending.reduce((sum, item) => sum + item.amount, 0);
-    
-    categorySpending.value = (categories || []).map(category => {
-      const categorySpending = spending.find(item => item.category_id === category.id);
-      const amount = categorySpending ? categorySpending.amount : 0;
-      
-      return {
-        ...category,
-        amount,
-        percentage: totalSpending > 0 ? (amount / totalSpending) * 100 : 0
-      };
-    }).sort((a, b) => b.amount - a.amount);
-    
-    // TODO: Update total balance, monthly income/expenses from API
-    // These are currently using mock data
-    
-  } catch (error) {
-    console.error('Error loading dashboard data:', error);
-    $q.notify({
-      color: 'negative',
-      message: 'Failed to load dashboard data',
-      icon: 'error',
-    });
-  } finally {
-    loading.value = false;
-  }
-};
-
-// Initialize component
-onMounted(() => {
-  loadData();
-});
+onMounted(loadData)
 </script>
-
-<style scoped>
-.q-card {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.q-card__section {
-  flex: 1 1 auto;
-}
-
-.q-linear-progress {
-  height: 10px;
-}
-</style>

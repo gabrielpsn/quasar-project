@@ -30,10 +30,12 @@ export default defineRouter(function (/* { store, ssrContext } */) {
   // Navigation guards
   Router.beforeEach(async (to, from, next) => {
     const authStore = useAuthStore()
-    
-    // Set the router instance in the auth store
-    authStore.setRouter(Router)
-    
+
+    // Carrega o perfil local (arquivo perfil.txt) uma única vez.
+    if (!authStore.initialized) {
+      await authStore.init()
+    }
+
     // Check if the route requires authentication
     if (to.matched.some(record => record.meta.requiresAuth)) {
       // Check if user is not authenticated
@@ -44,22 +46,10 @@ export default defineRouter(function (/* { store, ssrContext } */) {
           query: { redirect: to.fullPath }
         })
       }
-      
-      // If user is authenticated but hasn't loaded their data yet
-      if (!authStore.user) {
-        try {
-          await authStore.fetchUser()
-        } catch (error) {
-          console.error('Failed to fetch user:', error)
-          // If fetching user fails, log them out
-          authStore.logout()
-          return next({ name: 'login' })
-        }
-      }
-      
+
       return next()
     }
-    
+
     // Check if the route is only for guests
     if (to.matched.some(record => record.meta.requiresGuest)) {
       // If user is authenticated, redirect to home
@@ -68,7 +58,7 @@ export default defineRouter(function (/* { store, ssrContext } */) {
       }
       return next()
     }
-    
+
     // For all other routes, continue
     next()
   })

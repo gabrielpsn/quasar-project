@@ -1,137 +1,114 @@
-import { defineStore } from 'pinia';
-import { api } from 'src/boot/axios';
+import { defineStore } from 'pinia'
+import { goalsRepo } from 'src/services/repositories'
+import { shortId } from 'src/utils/uuid'
+import { cents } from 'src/utils/format'
+import { nowISO } from 'src/utils/dates'
 
 export const useGoalStore = defineStore('goals', {
   state: () => ({
     goals: [],
     loading: false,
-    error: null
+    error: null,
+    initialized: false,
   }),
 
   getters: {
-    activeGoals: (state) => {
-      return state.goals.filter(goal => !goal.achieved);
-    },
-    
-    completedGoals: (state) => {
-      return state.goals.filter(goal => goal.achieved);
-    },
-    
-    goalsByProgress: (state) => {
-      return [...state.goals].sort((a, b) => {
-        const progressA = a.current_amount / a.target_amount;
-        const progressB = b.current_amount / b.target_amount;
-        return progressB - progressA;
-      });
-    }
+    activeGoals: (state) => state.goals.filter((g) => !g.achieved),
+    completedGoals: (state) => state.goals.filter((g) => g.achieved),
+    goalsByProgress: (state) =>
+      [...state.goals].sort((a, b) => {
+        const pa = (a.current_amount || 0) / (a.target_amount || 1)
+        const pb = (b.current_amount || 0) / (b.target_amount || 1)
+        return pb - pa
+      }),
   },
 
   actions: {
+    async init() {
+      if (this.initialized) return
+      this.loading = true
+      try {
+        const data = await goalsRepo.load()
+        this.goals = Array.isArray(data) ? data : []
+        this.initialized = true
+      } catch (error) {
+        this.error = error.message
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async reload() {
+      this.initialized = false
+      await this.init()
+    },
+
+    persist() {
+      return goalsRepo.save(this.goals)
+    },
+
     async fetchGoals() {
-      this.loading = true;
-      this.error = null;
-      try {
-        const response = await api.get('/api/goals');
-        this.goals = response.data || [];
-        return this.goals;
-      } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to fetch goals';
-        throw error;
-      } finally {
-        this.loading = false;
-      }
+      await this.init()
+      return this.goals
     },
-    
-    async getGoalById(id) {
-      try {
-        const response = await api.get(`/api/goals/${id}`);
-        return response.data;
-      } catch (error) {
-        console.error(`Error fetching goal ${id}:`, error);
-        throw error;
-      }
+
+    getGoalById(id) {
+      return this.goals.find((g) => g.id === id) || null
     },
-    
+
     async createGoal(goalData) {
-      this.loading = true;
-      this.error = null;
-      try {
-        const response = await api.post('/api/goals', goalData);
-        this.goals.push(response.data);
-        return response.data;
-      } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to create goal';
-        throw error;
-      } finally {
-        this.loading = false;
+      const goal = {
+        id: goalData.id || shortId('g'),
+        name: goalData.name || goalData.nome || 'Nova meta',
+        description: goalData.description || '',
+        target_amount: cents(goalData.target_amount || 0),
+        current_amount: cents(goalData.current_amount || 0),
+        target_date: goalData.target_date || null,
+        achieved: !!goalData.achieved,
+        color: goalData.color || 'primary',
+        icon: goalData.icon || 'emoji_events',
+        tipo: goalData.tipo || 'projeto',
+        aporteMensal: cents(goalData.aporteMensal || 0),
+        criadoEm: nowISO(),
       }
+      this.goals.push(goal)
+      await this.persist()
+      return goal
     },
-    
+
     async updateGoal({ id, ...updateData }) {
-      this.loading = true;
-      this.error = null;
-      try {
-        const response = await api.put(`/api/goals/${id}`, updateData);
-        const index = this.goals.findIndex(g => g.id === id);
-        if (index !== -1) {
-          this.goals.splice(index, 1, response.data);
-        }
-        return response.data;
-      } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to update goal';
-        throw error;
-      } finally {
-        this.loading = false;
-      }
+      const index = this.goals.findIndex((g) => g.id === id)
+      if (index === -1) return null
+      const atual = this.goals[index]
+      this.goals.splice(index, 1, {
+        ...atual,
+        ...updateData,
+        target_amount:
+          updateData.target_amount !== undefined ? cents(updateData.target_amount) : atual.target_amount,
+        current_amount:
+          updateData.current_amount !== undefined ? cents(updateData.current_amount) : atual.current_amount,
+      })
+      await this.persist()
+      return this.goals[index]
     },
-    
+
     async updateGoalProgress({ id, amount }) {
-      this.loading = true;
-      this.error = null;
-      try {
-        const response = await api.put(`/api/goals/${id}/progress`, { amount });
-        const index = this.goals.findIndex(g => g.id === id);
-        if (index !== -1) {
-          this.goals.splice(index, 1, response.data);
-        }
-        return response.data;
-      } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to update goal progress';
-        throw error;
-      } finally {
-        this.loading = false;
-      }
+      const goal = this.getGoalById(id)
+      if (!goal) return null
+      const current = cents((goal.current_amount || 0) + (amount || 0))
+      return this.updateGoal({ id, current_amount: current, achieved: current >= (goal.target_amount || 0) })
     },
-    
+
     async deleteGoal(id) {
-      this.loading = true;
-      this.error = null;
-      try {
-        await api.delete(`/api/goals/${id}`);
-        this.goals = this.goals.filter(goal => goal.id !== id);
-        return true;
-      } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to delete goal';
-        throw error;
-      } finally {
-        this.loading = false;
-      }
+      this.goals = this.goals.filter((g) => g.id !== id)
+      await this.persist()
+      return true
     },
-    
+
     async toggleGoalStatus(id) {
-      const goal = this.goals.find(g => g.id === id);
-      if (!goal) return;
-      
-      try {
-        const updatedGoal = await this.updateGoal({
-          id,
-          achieved: !goal.achieved
-        });
-        return updatedGoal;
-      } catch (error) {
-        console.error('Error toggling goal status:', error);
-        throw error;
-      }
-    }
-  }
-});
+      const goal = this.getGoalById(id)
+      if (!goal) return null
+      return this.updateGoal({ id, achieved: !goal.achieved })
+    },
+  },
+})

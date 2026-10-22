@@ -1,58 +1,101 @@
+const PublicLayout = () => import('layouts/PublicLayout.vue')
+
 const routes = [
-  // Auth routes (public)
+  // Rotas públicas
   {
     path: '/login',
-    name: 'login',
-    component: () => import('pages/LoginPage.vue'),
-    meta: { requiresGuest: true }
+    component: PublicLayout,
+    meta: { requiresGuest: true },
+    children: [
+      { path: '', name: 'login', component: () => import('pages/LoginPage.vue') }
+    ]
   },
   {
     path: '/register',
-    name: 'register',
-    component: () => import('pages/RegisterPage.vue'),
-    meta: { requiresGuest: true }
+    component: PublicLayout,
+    meta: { requiresGuest: true },
+    children: [
+      { path: '', name: 'register', component: () => import('pages/RegisterPage.vue') }
+    ]
   },
   {
     path: '/forgot-password',
-    name: 'forgot-password',
-    component: () => import('pages/ForgotPasswordPage.vue'),
-    meta: { requiresGuest: true }
+    component: PublicLayout,
+    meta: { requiresGuest: true },
+    children: [
+      { path: '', name: 'forgot-password', component: () => import('pages/ForgotPasswordPage.vue') }
+    ]
   },
 
-  // Protected routes
+  // Rotas protegidas
   {
     path: '/',
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [
-      { 
-        path: '', 
+      {
+        path: '',
         name: 'dashboard',
-        component: () => import('pages/IndexPage.vue') 
+        component: () => import('pages/IndexPage.vue')
+      },
+      {
+        path: '/fluxo-caixa',
+        name: 'fluxo-caixa',
+        component: () => import('pages/CashFlowPage.vue'),
+        meta: { title: 'Fluxo de Caixa' }
       },
       {
         path: '/transactions',
         name: 'transactions',
         component: () => import('pages/TransactionsPage.vue'),
-        meta: { title: 'Transactions' }
+        meta: { title: 'Transações' }
+      },
+      {
+        path: '/cartoes',
+        name: 'cartoes',
+        component: () => import('pages/CardsPage.vue'),
+        meta: { title: 'Cartões' }
+      },
+      {
+        path: '/dividas',
+        name: 'dividas',
+        component: () => import('pages/DebtsPage.vue'),
+        meta: { title: 'Dívidas' }
+      },
+      {
+        path: '/investimentos',
+        name: 'investimentos',
+        component: () => import('pages/InvestmentsPage.vue'),
+        meta: { title: 'Investimentos' }
+      },
+      {
+        path: '/patrimonio',
+        name: 'patrimonio',
+        component: () => import('pages/NetWorthPage.vue'),
+        meta: { title: 'Patrimônio' }
       },
       {
         path: '/categories',
         name: 'categories',
         component: () => import('pages/CategoriesPage.vue'),
-        meta: { title: 'Categories' }
+        meta: { title: 'Categorias' }
       },
       {
         path: '/goals',
         name: 'goals',
         component: () => import('pages/GoalsPage.vue'),
-        meta: { title: 'Goals' }
+        meta: { title: 'Metas' }
       },
-      // Add more protected routes here
+      {
+        path: '/settings',
+        name: 'settings',
+        component: () => import('pages/SettingsPage.vue'),
+        meta: { title: 'Configurações' }
+      },
     ]
   },
 
-  // 404 page (must be last)
+  // 404 (precisa ser a última)
   {
     path: '/:catchAll(.*)*',
     name: 'not-found',
